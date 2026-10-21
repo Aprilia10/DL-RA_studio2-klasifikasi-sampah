@@ -1,22 +1,3 @@
-"""Skrip evaluasi resmi Studio 2 — Klasifikasi Sampah (IF25-40401).
-
-Skrip INI JUGA yang dipakai asisten dosen untuk menghitung skor pada validation set
-tersembunyi. Pastikan submission kelompok Anda lolos skrip ini sebelum tenggat.
-
-Pemakaian (uji pada split validasi buatan Anda sendiri dari data train):
-    python evaluate.py --submission ./submission --data ./my_val
-
-    --submission  folder berisi model.py dan model.pth
-    --data        folder berstruktur <data>/<nama_kelas>/*.jpg
-    --out         (opsional) simpan hasil ke file JSON
-
-Kontrak submission (folder submission/):
-    model.py   wajib mendefinisikan:
-                 get_model()     -> torch.nn.Module (arsitektur saja, TANPA mengunduh bobot)
-                 get_transform() -> callable: PIL.Image (RGB) -> torch.Tensor [3, H, W]
-    model.pth  state_dict hasil torch.save(model.state_dict(), "model.pth")
-               Output model: logits berukuran [batch, 5] dengan urutan kelas = CLASSES di bawah.
-"""
 import argparse
 import importlib.util
 import json
