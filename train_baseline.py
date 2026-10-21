@@ -1,15 +1,3 @@
-"""Baseline sederhana Studio 2: fine-tuning ResNet-18 (pretrained ImageNet).
-
-Titik awal saja — kelompok diharapkan melakukan eksperimen sendiri
-(backbone lain, augmentasi, freezing, scheduler, data tambahan, dll.).
-
-    python train_baseline.py --data ./train --epochs 8
-    python train_baseline.py --data ./train --epochs 8 --scratch   # tanpa bobot pretrained
-
-Hasil: submission/model.pth + folder my_val/ (split validasi lokal 15%)
-       yang bisa langsung diuji dengan:
-    python evaluate.py --submission ./submission --data ./my_val
-"""
 import argparse
 import random
 import shutil
