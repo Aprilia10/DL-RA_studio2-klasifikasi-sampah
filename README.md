@@ -46,7 +46,7 @@ Evaluasi dilakukan melalui tiga putaran preview dan satu hasil final yang menjad
 | Tahap Evaluasi | Jadwal | Macro-F1 |
 |---|---|---|
 | Preview 1 | 14 Oktober 2026 | Belum tersedia |
-| Preview 2 | 21 Oktober 2026 | Belum tersedia |
+| Preview 2 | 21 Oktober 2026 | 0.9901 |
 | Preview 3 / Final | 25 Oktober 2026 | Belum tersedia |
 
 ## 5. Struktur Repository
