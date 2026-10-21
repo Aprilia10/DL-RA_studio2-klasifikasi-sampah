@@ -7,6 +7,7 @@ Proyek kompetisi klasifikasi lima jenis sampah menggunakan Convolutional Neural 
 **Semester:** Ganjil 2026/2027
 
 ## 1. Identitas Kelompok
+**Nama Kelompok:** Manula
 
 | No. | Nama Anggota | NIM |
 |---|---|---|
@@ -15,7 +16,16 @@ Proyek kompetisi klasifikasi lima jenis sampah menggunakan Convolutional Neural 
 
 ## 2. Gambaran Proyek
 
-Proyek ini berfokus pada pengembangan model klasifikasi citra untuk mengenali lima kategori sampah, yaitu botol plastik, gelas plastik, kertas/kardus, saset/kemasan, dan styrofoam. Pengembangan dilakukan melalui eksperimen Convolutional Neural Network (CNN) yang dibangun dari awal (*from scratch*) maupun penggunaan arsitektur pralatih (*pretrained*) dengan pendekatan *fine-tuning*.
+Model klasifikasi citra yang menerima satu foto sampah dan memprediksi satu dari lima kelas, yaitu:
+| Indeks | Kelas|
+|---|---|
+| 0 | botol_plastik |
+| 1 | gelas_plastik |
+| 2 | kertas_kardus |
+| 3 | saset_kemasan |
+| 4 | styrofoam |
+
+Penilaian memakai Macro-F1 pada validation set tersembunyi milik tim pengajar
 
 ## 3. Rencana Eksperimen
 
