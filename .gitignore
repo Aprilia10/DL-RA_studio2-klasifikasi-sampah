@@ -1,0 +1,5 @@
+train/
+my_train/
+my_val/
+__pycache__/
+*.pyc
