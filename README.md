@@ -4,7 +4,7 @@
 **Program Studi:** Teknik Informatika, Institut Teknologi Sumatera  
 **Semester:** Ganjil 2026/2027
 
-Proyek kompetisi klasifikasi lima jenis sampah menggunakan Convolutional Neural Network (CNN) *from scratch* dan *fine-tuning* model *pretrained* untuk membandingkan performa berdasarkan Macro-F1.
+Proyek kompetisi klasifikasi lima jenis sampah menggunakan *fine-tuning* model *pretrained* ImageNet untuk membandingkan performa berdasarkan Macro-F1.
 
 ---
 
@@ -28,141 +28,165 @@ Model klasifikasi citra menerima satu foto sampah dan memprediksi satu dari lima
 | 0 | `botol_plastik` | Botol minuman plastik bening/berwarna |
 | 1 | `gelas_plastik` | Cup atau gelas kemasan minuman plastik |
 | 2 | `kertas_kardus` | Kardus, kertas kemasan, dan lembaran kertas |
-| 3 | `saset_kemasan` | Bungkus saset plastik/alumunium foil (makanan/minuman) |
+| 3 | `saset_kemasan` | Bungkus saset plastik/aluminium foil (makanan/minuman) |
 | 4 | `styrofoam` | Wadah makanan berbahan busa polistirena |
 
-Metrik penilaian utama yang digunakan adalah **Macro-F1** pada set validasi tersembunyi milik tim pengajar.
+Metrik penilaian utama adalah **Macro-F1** pada set validasi tersembunyi milik tim pengajar.
 
 ---
 
-## 3. Rencana & Ringkasan Pendekatan
+## 3. Ringkasan Pendekatan
 
-| Komponen | Rencana & Implementasi |
+**Model submission final: ConvNeXt-Tiny (*timm*), fine-tuning penuh dari bobot pretrained ImageNet, input 224×224.**
+
+| Komponen | Implementasi |
 |---|---|
-| **Arsitektur Model** | Baseline ResNet-18 (*torchvision*), ConvNeXt-Tiny (*timm*), dan EfficientNet-B2 (*timm*) |
-| **Strategi Pelatihan** | Fine-tuning model pretrained ImageNet dengan pemisahan learning rate antara *backbone* dan *classification head* |
+| **Arsitektur Model** | Baseline ResNet-18 (*torchvision*) dan ConvNeXt-Tiny (*timm*); last layer diganti menjadi 5 kelas |
+| **Strategi Pelatihan** | Full fine-tuning dengan pemisahan learning rate: *head* 3e-4 dan *backbone* 3e-5 (`bb_mult` 0,1); AdamW (weight decay 0,05); 12 epoch |
 | **Augmentasi Citra** | Random Resized Crop, Horizontal Flip, Color Jitter, Random Rotation, TrivialAugmentWide, dan Random Erasing |
-| **Regularisasi & Loss** | Label Smoothing Cross-Entropy Loss (`smooth=0.1`), AdamW optimizer, dan Cosine Annealing Learning Rate Scheduler |
-| **Protokol Validasi** | Local split 15% dari data latih (`my_val/`) dengan seed terkunci (42) untuk perbandingan adil dan pencegahan *data leakage* |
+| **Regularisasi & Loss** | Label Smoothing Cross-Entropy (`smooth=0.1`, membantu menghadapi label noise), AdamW, dan Cosine Annealing LR Scheduler |
+| **Protokol Validasi** | Split lokal 15% dari data latih (`my_val/`, 410 gambar) dengan seed tetap; gambar `my_val` dikeluarkan dari latihan agar skor tidak bocor (*data leakage*) |
+| **Run Final** | ConvNeXt-Tiny dilatih ulang pada seluruh `train/` (`--full`), epoch terakhir disimpan |
+| **Ukuran Bobot** | Disimpan dalam fp16 (±54 MB) agar di bawah batas 100 MB GitHub; dimuat kembali ke fp32 oleh `load_state_dict` |
 
 ---
 
 ## 4. Pemantauan Hasil Kompetisi
 
-Evaluasi dilakukan melalui dua putaran preview dan satu evaluasi final yang menjadi penentu akhir penilaian performa model.
+Evaluasi dilakukan dua putaran preview dan satu evaluasi Final yang menentukan nilai.
 
 | Tahap Evaluasi | Jadwal | Macro-F1 | Status / Model |
 |:---|:---:|:---:|:---|
-| Preview 1 | 14 Oktober 2026 | - | Belum tersedia |
-| Preview 2 | 21 Oktober 2026 | **0.9901** | ResNet-18 (Pretrained) |
-| Final | 25 Oktober 2026 | *Menunggu evaluasi* | Model terbaik kelompok Manula |
+| Preview 1 | 14 Oktober 2026 | - | |
+| Preview 2 | 21 Oktober 2026 | 0.9901 | ResNet-18 (Pretrained) |
+| Final | 25 Oktober 2026 | 0.9722 | ConvNeXt-Tiny (fp16) |
 
 ---
 
 ## 5. Hasil Evaluasi & Perbandingan Model
 
-Evaluasi model pada subset validasi lokal (`my_val`) yang sama:
+Skor lokal dihitung dengan `python evaluate.py --submission <folder> --data ./my_val` pada `my_val` yang sama (410 gambar).
 
-| Model | Ukuran Input | Macro-F1 (`my_val`) | Akurasi | Keterangan |
+### 5.1 Hasil pada `my_val`
+
+| Model | Input | Macro-F1 | Akurasi | Keterangan |
 |---|:---:|:---:|:---:|---|
-| **ResNet-18 (Baseline)** | 224×224 | *TBD* | *TBD* | Model submission Preview 2 (44.8 MB) |
-| **ConvNeXt-Tiny** | 224×224 | *TBD* | *TBD* | Eksperimen Anggota 1 (`sub_a`) |
-| **EfficientNet-B2** | 288×288 | *TBD* | *TBD* | Eksperimen Anggota 2 (`sub_b`) |
+| ResNet-18 (Baseline) | 224×224 | 0,9378 | 0,9415 | `train_baseline.py`, 8 epoch; submission Preview 2 (±44 MB) |
+| **ConvNeXt-Tiny** | 224×224 | **0,9703** | **0,9732** | `train.py`, 12 epoch, `my_val` tidak ikut dilatih |
 
-*Aturan adopsi submission final: Model baru hanya menggantikan ResNet-18 jika Macro-F1 lokal lebih tinggi minimal +0.005.*
+**F1 per kelas:**
+
+| Model | botol_plastik | gelas_plastik | kertas_kardus | saset_kemasan | styrofoam |
+|---|:---:|:---:|:---:|:---:|:---:|
+| ResNet-18 | 0,9610 | 0,9620 | 0,8846 | 0,9442 | 0,9372 |
+| ConvNeXt-Tiny | 0,9873 | 0,9873 | 0,9320 | 0,9852 | 0,9596 |
+
+**Confusion matrix** (baris = label asli, kolom = prediksi):
+
+| ResNet-18 | botol | gelas | kertas | saset | styrofoam |
+|---|:---:|:---:|:---:|:---:|:---:|
+| botol_plastik | 74 | 1 | 0 | 2 | 1 |
+| gelas_plastik | 0 | 76 | 1 | 0 | 1 |
+| kertas_kardus | 0 | 2 | 46 | 1 | 5 |
+| saset_kemasan | 2 | 0 | 2 | 93 | 3 |
+| styrofoam | 0 | 1 | 1 | 1 | 97 |
+
+| ConvNeXt-Tiny | botol | gelas | kertas | saset | styrofoam |
+|---|:---:|:---:|:---:|:---:|:---:|
+| botol_plastik | 78 | 0 | 0 | 0 | 0 |
+| gelas_plastik | 0 | 78 | 0 | 0 | 0 |
+| kertas_kardus | 1 | 1 | 48 | 1 | 3 |
+| saset_kemasan | 0 | 0 | 0 | 100 | 0 |
+| styrofoam | 1 | 1 | 1 | 2 | 95 |
+
+### 5.2 Analisis singkat
+
+- ConvNeXt-Tiny mencapai Macro-F1 0,9703 pada `my_val` (410 gambar), di atas baseline ResNet-18 (0,9378). Selisih +0,0325 jauh di atas ambang adopsi +0,005, sehingga ConvNeXt-Tiny dipilih sebagai submission final.
+- `kertas_kardus` adalah kelas tersulit pada kedua model (F1 0,8846 pada ResNet-18 dan 0,9320 pada ConvNeXt-Tiny). Kesalahan terbanyaknya adalah `kertas_kardus` yang terprediksi sebagai `styrofoam` (5 gambar pada ResNet-18, 3 gambar pada ConvNeXt-Tiny).
+- ConvNeXt-Tiny memperbaiki kelima kelas dibanding ResNet-18, dengan kenaikan terbesar pada `saset_kemasan` (+0,0410) dan `kertas_kardus` (+0,0474).
+- Validasi lokal hanya 410 gambar, sehingga selisih kecil (di bawah ±1 poin) belum tentu signifikan.
+- Eksperimen EfficientNet-B2 tidak dilaporkan karena log evaluasi yang dapat diverifikasi tidak tersedia.
+
+> **Catatan:** bobot yang dikumpulkan di `submission/` berasal dari run `--full` (seluruh `train/`, termasuk `my_val`), sehingga skor `my_val` pada bobot tersebut (±1,0) **tidak bermakna** dan hanya membuktikan submission dapat dijalankan. Skor 0,9703 berasal dari run terpisah yang tidak melatih `my_val`.
+
+*Aturan adopsi submission final: model baru menggantikan ResNet-18 hanya jika Macro-F1 lokal lebih tinggi minimal +0,005.*
 
 ---
 
 ## 6. Data & Data Tambahan
 
-1. **Dataset Utama:**
-   - Folder `train/` berisi citra 5 kelas sampah yang disediakan oleh tim pengajar.
-2. **Data Tambahan Eksternal:**
-   - Tidak menggunakan data eksternal tambahan dari luar dataset kompetisi untuk menjaga konsistensi domain distribusi dan memastikan kepatuhan penuh terhadap ketentuan kompetisi.
-3. **Pembagian Data Validasi Lokal (`my_val/`):**
-   - Dibuat menggunakan stratified random sampling sebesar 15% dari dataset `train/` menggunakan random seed `42`.
-   - Subset ini diisolasi dari proses pelatihan model eksplorasi (`train.py`) guna menghasilkan skor Macro-F1 yang obyektif dan sebanding.
-   - Integritas data validasi dicocokkan antar-anggota dengan verifikasi checksum MD5.
+1. **Dataset Utama:** folder `train/` berisi ±2.750 citra 5 kelas dari tim pengajar.
+2. **Data Tambahan Eksternal:** tidak menggunakan data eksternal dari luar dataset kompetisi, untuk menjaga konsistensi domain dan kepatuhan terhadap ketentuan kompetisi.
+3. **Validasi Lokal (`my_val/`):**
+   - Dibuat dengan `prepare_split.py` (15% dari `train/`, seed tetap), menghasilkan 410 gambar.
+   - `train.py` mengeluarkan gambar `my_val` dari latihan (kecuali run `--full`) agar skor Macro-F1 objektif dan sebanding.
+   - Integritas data validasi dicocokkan antar-anggota dengan checksum MD5.
 
 ---
 
 ## 7. Cara Reproduksi
 
-Berikut adalah panduan lengkap untuk mereproduksi hasil pelatihan dan evaluasi model:
+> **Dataset `train/` tidak disertakan dalam repository ini** (diabaikan via `.gitignore`). Unduh dari tautan tim pengajar, lalu letakkan folder `train/` di root repository (sejajar dengan `train.py`).
 
-> [!IMPORTANT]
-> **Dataset `train/` tidak disertakan dalam repository ini** (diabaikan via `.gitignore`) karena ukurannya terlalu besar untuk GitHub. Unduh dataset terpisah dari portal/link yang diberikan oleh tim pengajar, lalu letakkan folder `train/` di root repository (sejajar dengan `train.py`).
-
-### 1. Persiapan Lingkungan (Environment)
-
-Pastikan Python 3.10+ telah terpasang, lalu pasang dependensi yang dibutuhkan:
+### 1. Persiapan Lingkungan
 
 ```bash
-pip install -r submission/requirements.txt
-pip install timm numpy
+pip install -r submission/requirements.txt   # timm
+pip install numpy
 ```
 
-### 2. Penyiapan Subset Validasi Lokal (`my_val/`)
-
-Setelah dataset `train/` tersedia, buat subset `my_val` (15%) dan `my_train` (85%):
+### 2. Penyiapan Validasi Lokal
 
 ```bash
 python prepare_split.py
+
+# Verifikasi checksum my_val
+find my_val -type f | sort | md5sum                                                # Linux/macOS
+Get-ChildItem -Recurse my_val -File | Sort-Object FullName | Get-FileHash -Algorithm MD5   # PowerShell
 ```
 
-Verifikasi konsistensi checksum data validasi di terminal:
+### 3. Pelatihan
 
 ```bash
-# Linux/macOS
-find my_val -type f | sort | md5sum
+# Baseline ResNet-18 (lihat skrip untuk argumen)
+python train_baseline.py
 
-# Windows (PowerShell)
-Get-ChildItem -Recurse my_val -File | Sort-Object FullName | Get-FileHash -Algorithm MD5
+# ConvNeXt-Tiny (my_val tidak ikut dilatih)
+python train.py --data train/ --arch convnext_tiny --out sub_a
+
+# Run final pada seluruh train/
+python train.py --data train/ --arch convnext_tiny --out submission_new --full
 ```
 
-### 3. Pelatihan Model
-
-- **Melatih Baseline ResNet-18:**
-  ```bash
-  python train_baseline.py --data train/ --epochs 8
-  ```
-
-- **Melatih Model ConvNeXt-Tiny (Anggota 1):**
-  ```bash
-  python train.py --data train/ --arch convnext_tiny --out sub_a
-  ```
-
-- **Melatih Model EfficientNet-B2 (Anggota 2):**
-  ```bash
-  python train.py --data train/ --arch efficientnet_b2 --img_size 288 --out sub_b
-  ```
-
-- **Pelatihan Final Full-Train (Jika model baru menang):**
-  ```bash
-  python train.py --data train/ --arch <nama_arsitektur_terbaik> --out submission_new --full
-  ```
-
-### 4. Evaluasi Model
-
-Jalankan evaluasi pada model submission atau model eksperimen menggunakan `evaluate.py`:
+### 4. Konversi Bobot ke fp16 dan Pasang ke `submission/`
 
 ```bash
-# Evaluasi submission ResNet-18 saat ini
-python evaluate.py --submission ./submission --data ./my_val
+python - <<'PY'
+import torch
+sd = torch.load("submission_new/model.pth", map_location="cpu")
+torch.save({k: v.half() if v.is_floating_point() else v for k, v in sd.items()}, "submission/model.pth")
+PY
+cp submission_new/model.py submission/model.py
+cp submission_new/requirements.txt submission/requirements.txt
+```
 
-# Evaluasi model eksperimen EfficientNet-B2
-python evaluate.py --submission ./sub_b --data ./my_val
+### 5. Evaluasi
+
+```bash
+python evaluate.py --submission ./sub_a --data ./my_val
+python evaluate.py --submission ./submission --data ./my_val   # skor ±1,0 karena run --full
 ```
 
 ---
 
 ## 8. Struktur Repository
 
-- `train.py` — Skrip pelatihan fine-tuning backbone modern (*timm*) dengan proteksi validasi.
-- `train_baseline.py` — Skrip pelatihan baseline ResNet-18 serta pembuat split `my_val`.
-- `evaluate.py` — Skrip evaluasi performa submission (Macro-F1, per-class F1, matriks konfusi).
+- `train.py` — pelatihan fine-tuning backbone *timm*; membuat `model.py` kontrak submission.
+- `train_baseline.py` — baseline ResNet-18.
+- `prepare_split.py` — membuat `my_val/` (15%) dan `my_train/` (85%) dari `train/`.
+- `evaluate.py` — evaluasi (Macro-F1, F1 per kelas, confusion matrix).
 - `submission/`
-  - `model.py` — Definisi arsitektur dan transformasi inferensi.
-  - `model.pth` — Bobot terlatih model submission.
-  - `requirements.txt` — Dependensi minimal untuk inferensi.
-  - `README.md` — Panduan teknis berkas submission.
+  - `model.py` — `get_model()` (arsitektur saja) dan `get_transform()`.
+  - `model.pth` — bobot ConvNeXt-Tiny (fp16, ±54 MB).
+  - `requirements.txt` — dependensi inferensi (`timm`).
+  - `README.md` — catatan berkas submission.
