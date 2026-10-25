@@ -159,7 +159,8 @@ def main():
         print(f"--> SELESAI EP {ep+1:02d}/{a.epochs}: loss={tl/len(dl_tr):.4f} | my_val_macroF1={f:.4f} | acc={acc:.4f} ({time.time()-t0:.0f}s)", flush=True)
         if a.full or f > best:
             best = f
-            torch.save(model.state_dict(), os.path.join(a.out, "model.pth"))
+            state_fp16 = {k: v.half() if v.is_floating_point() else v for k, v in model.state_dict().items()}
+            torch.save(state_fp16, os.path.join(a.out, "model.pth"))
 
     # ---- tulis kontrak submission ----
     MODEL_PY = f'''"""Submission Studio 2 - {a.arch} (timm). get_model() hanya membangun arsitektur."""
