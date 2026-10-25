@@ -140,7 +140,8 @@ def main():
         model.train()
         t0 = time.time()
         tl = 0.0
-        for x, y in dl_tr:
+        n_batches = len(dl_tr)
+        for step, (x, y) in enumerate(dl_tr):
             x, y = x.to(dev), y.to(dev)
             opt.zero_grad(set_to_none=True)
             with torch.autocast(dev, enabled=dev == "cuda"):
@@ -149,10 +150,13 @@ def main():
             scaler.step(opt)
             scaler.update()
             tl += loss.item()
+            if (step + 1) % 15 == 0 or (step + 1) == n_batches:
+                speed = (step + 1) * a.bs / max(1e-3, time.time() - t0)
+                print(f"  [ep {ep+1:02d}/{a.epochs}] batch {step+1:02d}/{n_batches} | loss={tl/(step+1):.4f} | {speed:.1f} img/s", flush=True)
         sched.step()
         f, per, acc = evaluate_model(model, dl_va, dev)
         log.append({"epoch": ep + 1, "loss": tl / len(dl_tr), "val_macro_f1": f, "val_acc": acc})
-        print(f"ep {ep+1:02d}/{a.epochs} loss={tl/len(dl_tr):.4f} my_val_macroF1={f:.4f} acc={acc:.4f} ({time.time()-t0:.0f}s)")
+        print(f"--> SELESAI EP {ep+1:02d}/{a.epochs}: loss={tl/len(dl_tr):.4f} | my_val_macroF1={f:.4f} | acc={acc:.4f} ({time.time()-t0:.0f}s)", flush=True)
         if a.full or f > best:
             best = f
             torch.save(model.state_dict(), os.path.join(a.out, "model.pth"))
