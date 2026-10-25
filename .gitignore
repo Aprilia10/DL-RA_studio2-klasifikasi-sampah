@@ -3,3 +3,6 @@ my_train/
 my_val/
 __pycache__/
 *.pyc
+sub_a/
+sub_b/
+submission_new/
