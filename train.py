@@ -39,7 +39,7 @@ def main():
     p.add_argument("--bb_mult", type=float, default=0.1)
     p.add_argument("--wd", type=float, default=0.05)
     p.add_argument("--img_size", type=int, default=224)
-    p.add_argument("--aug", default="strong", choices=["basic", "strong"])
+    p.add_argument("--aug", default="robust", choices=["basic", "strong", "robust"])
     p.add_argument("--smooth", type=float, default=0.1)
     p.add_argument("--full", action="store_true")
     p.add_argument("--seed", type=int, default=42)
@@ -50,6 +50,8 @@ def main():
     np.random.seed(a.seed)
     torch.manual_seed(a.seed)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
+    if dev == "cpu":
+        torch.set_num_threads(max(1, min(8, os.cpu_count() or 4)))
     MEAN, STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
     S = a.img_size
 
@@ -59,16 +61,44 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize(MEAN, STD),
     ])
-    aug = [
-        transforms.RandomResizedCrop(S, scale=(0.5, 1.0)),
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(0.3, 0.3, 0.3, 0.05),
-    ]
-    if a.aug == "strong":
-        aug += [transforms.RandomRotation(15), transforms.TrivialAugmentWide()]
-    aug += [transforms.ToTensor(), transforms.Normalize(MEAN, STD)]
-    if a.aug == "strong":
-        aug += [transforms.RandomErasing(p=0.25)]
+
+    if a.aug == "basic":
+        aug = [
+            transforms.RandomResizedCrop(S, scale=(0.6, 1.0)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(0.2, 0.2, 0.2),
+            transforms.ToTensor(),
+            transforms.Normalize(MEAN, STD),
+        ]
+    elif a.aug == "strong":
+        aug = [
+            transforms.RandomResizedCrop(S, scale=(0.5, 1.0)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(0.3, 0.3, 0.3, 0.05),
+            transforms.RandomRotation(15),
+            transforms.TrivialAugmentWide(),
+            transforms.ToTensor(),
+            transforms.Normalize(MEAN, STD),
+            transforms.RandomErasing(p=0.25),
+        ]
+    elif a.aug == "robust":
+        aug = [
+            # Mengatasi perbedaan jarak foto dosen/asdos (macro close-up hingga agak jauh)
+            transforms.RandomResizedCrop(S, scale=(0.4, 1.0), ratio=(0.75, 1.33)),
+            # Mengatasi orientasi sampah bebas (tidak ada orientasi atas-bawah baku)
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomVerticalFlip(p=0.2),
+            # Mengatasi sudut pemotretan miring dan perspektif kamera HP
+            transforms.RandomRotation(degrees=(-25, 25)),
+            transforms.RandomPerspective(distortion_scale=0.15, p=0.3),
+            # Mengatasi variasi pencahayaan ruangan, lampu flash, dan sensor HP dosen
+            transforms.ColorJitter(brightness=0.35, contrast=0.35, saturation=0.35, hue=0.08),
+            transforms.TrivialAugmentWide(),
+            transforms.ToTensor(),
+            transforms.Normalize(MEAN, STD),
+            # Cutout: memaksa model mengenali tekstur & bentuk global, bukan cuma 1 logo merek
+            transforms.RandomErasing(p=0.3, scale=(0.02, 0.25), value="random"),
+        ]
     tf_train = transforms.Compose(aug)
 
     # ---- data ----
